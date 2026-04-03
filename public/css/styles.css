@@ -1,0 +1,263 @@
+/* ================ */
+/* Base              */
+/* ================ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #f3f4f6;
+  color: #101828;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* ================ */
+/* Layout            */
+/* ================ */
+
+.page-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.invite-card {
+  width: min(1200px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+}
+
+.thumbnail-wrap {
+  background: #e7d4a7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.invite-thumbnail {
+  width: 100%;
+  max-width: 460px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+.content-wrap {
+  padding: 48px 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ================ */
+/* Typography        */
+/* ================ */
+
+.eyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #667085;
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  font-size: 2.9rem;
+  line-height: 1.05;
+}
+
+.guest-limit {
+  margin: 8px 0;
+  font-weight: 600;
+}
+
+.deadline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475467;
+  font-size: 0.95rem;
+  margin-bottom: 26px;
+}
+
+/* ================ */
+/* Form              */
+/* ================ */
+
+.rsvp-form {
+  display: grid;
+  gap: 18px;
+}
+
+.form-group label {
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #fff;
+}
+
+.form-group textarea {
+  border-radius: 18px;
+  min-height: 100px;
+}
+
+/* ================ */
+/* RSVP Buttons      */
+/* ================ */
+
+.choice-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.choice-pill {
+  position: relative;
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1.5px solid #ccc;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.choice-pill input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.yes-pill {
+  border-color: #22c55e;
+  color: #166534;
+}
+
+.maybe-pill {
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.no-pill {
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.yes-pill:has(input:checked) {
+  background: #22c55e;
+  color: white;
+}
+
+.maybe-pill:has(input:checked) {
+  background: #f59e0b;
+  color: white;
+}
+
+.no-pill:has(input:checked) {
+  background: #ef4444;
+  color: white;
+}
+
+/* ================ */
+/* Submit            */
+/* ================ */
+
+.submit-button {
+  background: #22c55e;
+  border: none;
+  padding: 16px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ================ */
+/* Location Card     */
+/* ================ */
+
+.location-card {
+  margin-top: 26px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.location-title {
+  font-size: 0.8rem;
+  color: #667085;
+  margin-bottom: 6px;
+}
+
+.location-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.location-address {
+  font-size: 0.9rem;
+  color: #475467;
+  margin-top: 4px;
+}
+
+.location-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: #16a34a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ================ */
+/* Responsive        */
+/* ================ */
+
+@media (max-width: 900px) {
+  .invite-card {
+    grid-template-columns: 1fr;
+  }
+
+  .thumbnail-wrap {
+    padding: 20px;
+  }
+
+  .invite-thumbnail {
+    max-width: 100%;
+  }
+
+  .content-wrap {
+    padding: 30px 20px;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+  }
+
+  .submit-button {
+    width: 100%;
+  }
+}
