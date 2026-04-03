@@ -261,3 +261,36 @@ h1 {
     width: 100%;
   }
 }
+/* ================ */
+/* Error State       */
+/* ================ */
+
+.error-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.error-state h2 {
+  margin: 0 0 10px;
+  font-size: 1.8rem;
+}
+
+.error-state p {
+  margin: 0 0 20px;
+  color: #475467;
+}
+
+.retry-button {
+  background: #22c55e;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.retry-button:hover {
+  opacity: 0.92;
+}

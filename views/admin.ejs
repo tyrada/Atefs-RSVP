@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - RSVP List</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    .status {
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .yes { background: #dcfce7; color: #166534; }
+    .maybe { background: #fef3c7; color: #92400e; }
+    .no { background: #fee2e2; color: #991b1b; }
+    .none { background: #f3f4f6; color: #374151; }
+  </style>
+</head>
+<body>
+
+<main class="page-shell">
+  <section class="invite-card" style="grid-template-columns:1fr;">
+    <div class="content-wrap">
+
+      <h1>RSVP Dashboard</h1>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach(row => { %>
+            <tr>
+              <td><%= row.guest_name %></td>
+              <td><%= row.phone %></td>
+              <td>
+                <% if (row.attendance_status === 'Yes') { %>
+                  <span class="status yes">Yes</span>
+                <% } else if (row.attendance_status === 'Maybe') { %>
+                  <span class="status maybe">Maybe</span>
+                <% } else if (row.attendance_status === 'No') { %>
+                  <span class="status no">No</span>
+                <% } else { %>
+                  <span class="status none">No Response</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+    </div>
+  </section>
+</main>
+
+</body>
+</html>
