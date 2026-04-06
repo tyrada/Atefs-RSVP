@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 // FIREBASE SETUP
 // =====================
 
-const serviceAccount = require('./atefs-henna-rsvp-firebase-adminsdk-fbsvc-2ee6ba48fe.json');
+const serviceAccount = requireJSON.parse(process.env.FIREBASE_KEY);
 
 
 admin.initializeApp({
