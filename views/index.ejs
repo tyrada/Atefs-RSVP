@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RSVP Invitation</title>
+    <title>Atef's Henna Party</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📩</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -29,7 +30,7 @@
       <section class="invite-card">
         <div class="thumbnail-wrap">
           <img
-            src="/images/invite.jpg"
+            src="/images/invite.jpeg"
             alt="Invitation thumbnail"
             class="invite-thumbnail"
           />
@@ -41,28 +42,27 @@
           <p class="guest-limit">for 1 person only</p>
           <p class="deadline">
             <i class="ri-calendar-line"></i>
-            RSVP by Apr 22, 2026
+            RSVP by May 1st, 2026
           </p>
+          <div id="guestError" class="error-state" style="display:none;">
+            <h2>Seems like you're not on the guest list</h2>
+            <p>Your number was not found. Please contact the host or try a different phone number.</p>
 
-          <% if (error) { %>
-            <div class="error-state">
-              <h2>Error</h2>
-              <p>Please try again.</p>
-              <button
-                type="button"
-                class="retry-button"
-                onclick="window.location.href='/'"
-              >
-                Try Again
-              </button>
-            </div>
-          <% } else { %>
-            <form action="/rsvp" method="POST" class="rsvp-form">
+            <button 
+              class="submit-button" 
+              style="margin-top: 16px;"
+              onclick="window.location.href='/'"
+            >
+              Try Again
+            </button>
+          </div>
+            
+            <form action="/rsvp" method="POST" class="rsvp-form" id="rsvpForm" onsubmit="return validateForm(event)">
               <div class="form-group">
                 <label>Will you attend?</label>
                 <div class="choice-group">
                   <label class="choice-pill yes-pill">
-                    <input type="radio" name="attendance" value="Yes" required />
+                    <input type="radio" name="attendance" value="Yes" />
                     <span>Yes</span>
                   </label>
                   <label class="choice-pill maybe-pill">
@@ -83,7 +83,6 @@
                   name="name"
                   type="text"
                   placeholder="Your name"
-                  required
                 />
               </div>
 
@@ -94,7 +93,6 @@
                   name="contact"
                   type="tel"
                   placeholder="Your phone number"
-                  required
                 />
               </div>
 
@@ -113,17 +111,85 @@
                 Guest limit enforced: 1 RSVP per phone number.
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 class="submit-button"
-                onclick="this.disabled=true; this.innerText='Submitting...'; this.form.submit();"
               >
                 Submit
               </button>
             </form>
-          <% } %>
         </div>
       </section>
     </main>
+    <script>
+        function validateForm(e) {
+          let valid = true;
+
+          const name = document.getElementById('name');
+          const phone = document.getElementById('contact');
+          const attendance = document.querySelector('input[name="attendance"]:checked');
+          if (valid) {
+            const btn = document.querySelector('.submit-button');
+            btn.disabled = true;
+            btn.innerText = 'Submitting...';
+          }
+          // reset
+          name.style.border = '1px solid #d0d5dd';
+          phone.style.border = '1px solid #d0d5dd';
+          document.querySelector('.choice-group').style.outline = 'none';
+
+          if (!name.value.trim()) {
+            name.style.border = '2px solid red';
+            valid = false;
+          }
+
+          if (!phone.value.trim()) {
+            phone.style.border = '2px solid red';
+            valid = false;
+          }
+
+          if (!attendance) {
+            document.querySelector('.choice-group').style.outline = '2px solid red';
+            valid = false;
+          }
+          if (!valid) {
+            e.preventDefault();
+
+            const btn = document.querySelector('.submit-button');
+            btn.disabled = false;
+            btn.innerText = 'Submit';
+
+            const popup = document.createElement('div');
+            popup.innerText = 'Please fill out all required fields';
+            popup.style.position = 'fixed';
+            popup.style.top = '20px';
+            popup.style.left = '50%';
+            popup.style.transform = 'translateX(-50%)';
+            popup.style.background = '#ef4444';
+            popup.style.color = 'white';
+            popup.style.padding = '12px 20px';
+            popup.style.borderRadius = '10px';
+            popup.style.zIndex = '9999';
+
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 2500);
+
+            return false;
+          }
+          const btn = document.querySelector('.submit-button');
+          btn.disabled = true;
+          btn.innerText = 'Submitting...';
+
+          return true;
+        }
+      </script>
+      <script>
+        const params = new URLSearchParams(window.location.search);
+
+        if (params.get('error') === '1') {
+          document.getElementById('rsvpForm').style.display = 'none';
+          document.getElementById('guestError').style.display = 'block';
+        }
+      </script>
   </body>
 </html>

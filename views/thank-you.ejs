@@ -21,7 +21,7 @@
       <section class="invite-card">
         <div class="thumbnail-wrap">
           <img
-            src="/images/invite.jpg"
+            src="/images/invite.jpeg"
             alt="Invitation thumbnail"
             class="invite-thumbnail"
           />
@@ -29,9 +29,16 @@
 
         <div class="content-wrap">
           <p class="eyebrow">RSVP</p>
-          <h1>Thank You</h1>
-          <p class="guest-limit">Your RSVP has been received.</p>
-          <p class="deadline">You may now close this page.</p>
+
+          <% if (type === 'update') { %>
+            <h1>RSVP Updated</h1>
+            <p class="guest-limit">Your RSVP has been updated successfully.</p>
+            <p class="deadline">You may now close this page.</p>
+          <% } else { %>
+            <h1>Thank You</h1>
+            <p class="guest-limit">Your RSVP has been received.</p>
+            <p class="deadline">You may now close this page.</p>
+          <% } %>
         </div>
       </section>
     </main>

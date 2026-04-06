@@ -1,67 +1,41 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const sqlite3 = require('sqlite3').verbose();
 const XLSX = require('xlsx');
+const admin = require('firebase-admin');
+const ADMIN_KEY = process.env.ADMIN_KEY;;
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// =====================
+// FIREBASE SETUP
+// =====================
+
+const serviceAccount = require('./atefs-henna-rsvp-firebase-adminsdk-fbsvc-2ee6ba48fe.json');
+
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
+// =====================
+// PATHS
+// =====================
+
 const DATA_DIR = path.join(__dirname, 'data');
-const DB_PATH = path.join(DATA_DIR, 'rsvps.db');
 const EXCEL_PATH = path.join(DATA_DIR, 'rsvp-list.xlsx');
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const db = new sqlite3.Database(DB_PATH);
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-// db setup and seeding
-
-db.serialize(() => {
-
-  // RSVP table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS rsvps (
-      phone_number TEXT PRIMARY KEY,
-      guest_name TEXT,
-      attendance_status TEXT NOT NULL CHECK(attendance_status IN ('Yes','Maybe','No')),
-      host_message TEXT,
-      submitted_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `);
-
-  // Guest whitelist
-  db.run(`
-    CREATE TABLE IF NOT EXISTS guest_list (
-      phone TEXT PRIMARY KEY,
-      guest_name TEXT
-    )
-  `);
-
-  // Placeholder guests
-  const guests = [
-    ['6131111111', 'Ahmed'],
-    ['6132222222', 'Omar'],
-    ['6133333333', 'Yusuf'],
-    ['6134444444', 'Hassan']
-  ];
-
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO guest_list (phone, guest_name)
-    VALUES (?, ?)
-  `);
-
-  guests.forEach(([phone, name]) => {
-    stmt.run(phone, name);
-  });
-
-  stmt.finalize();
-});
-
-
+// =====================
+// EXPRESS SETUP
+// =====================
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -70,55 +44,72 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-//  Helper to clean phone numbers to digits only
+// =====================
+// HELPERS
+// =====================
 
 function normalizePhone(input = '') {
   return input.replace(/\D/g, '').trim();
 }
 
-// Generates an Excel snapshot of the current RSVP data
+// =====================
+// SEED GUEST LIST
+// =====================
 
-function writeExcelSnapshot() {
-  db.all(
-    `
-    SELECT 
-      g.phone,
-      g.guest_name AS invited_name,
-      r.guest_name AS submitted_name,
-      r.attendance_status,
-      r.host_message,
-      r.updated_at
-    FROM guest_list g
-    LEFT JOIN rsvps r 
-      ON g.phone = r.phone_number
-    ORDER BY g.guest_name ASC
-    `,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error('Excel export failed:', err.message);
-        return;
-      }
+async function seedGuests() {
+  const guests = [
+    { phone: '6131111111', name: 'Ahmed' },
+    { phone: '6132222222', name: 'Omar' },
+    { phone: '6133333333', name: 'Yusuf' },
+    { phone: '6134444444', name: 'Hassan' }
+  ];
 
-      const formatted = rows.map(row => ({
-        Phone: row.phone,
-        Invited_Name: row.invited_name,
-        Submitted_Name: row.submitted_name || '',
-        RSVP_Status: row.attendance_status || 'No Response',
-        Message: row.host_message || '',
-        Updated_At: row.updated_at || ''
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(formatted);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'RSVP List');
-
-      XLSX.writeFile(workbook, EXCEL_PATH);
-    }
-  );
+  for (const g of guests) {
+    await db.collection('guest_list').doc(g.phone).set({
+      name: g.name
+    }, { merge: true });
+  }
 }
 
-// route
+seedGuests();
+
+// =====================
+// EXCEL EXPORT
+// =====================
+
+async function writeExcelSnapshot() {
+  const guestsSnap = await db.collection('guest_list').get();
+  const rsvpSnap = await db.collection('rsvps').get();
+
+  const rsvpMap = {};
+  rsvpSnap.forEach(doc => {
+    rsvpMap[doc.id] = doc.data();
+  });
+
+  const rows = [];
+
+  guestsSnap.forEach(doc => {
+    const guest = doc.data();
+    const rsvp = rsvpMap[doc.id];
+
+    rows.push({
+      Phone: doc.id,
+      Invited_Name: guest.name,
+      RSVP_Status: rsvp ? rsvp.attendance_status : 'No Response',
+      Message: rsvp ? rsvp.host_message : ''
+    });
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'RSVP List');
+
+  XLSX.writeFile(workbook, EXCEL_PATH);
+}
+
+// =====================
+// ROUTES
+// =====================
 
 app.get('/', (req, res) => {
   res.render('index', {
@@ -126,148 +117,242 @@ app.get('/', (req, res) => {
     error: req.query.error || null
   });
 });
+
 app.get('/thank-you', (req, res) => {
-  res.render('thank-you');
+  res.render('thank-you', {type: 'new'});
 });
-app.get('/error', (req, res) => {
-  res.redirect('/?error=1');
-});
-// RSVP submission route
 
-app.post('/rsvp', (req, res) => {
-  const attendanceStatus = (req.body.attendance || '').trim();
-  const hostMessage = (req.body.message || '').trim();
-  const phoneNumber = normalizePhone(req.body.contact || '');
-  const now = new Date().toISOString();
+// =====================
+// RSVP SUBMISSION
+// =====================
 
-  if (!attendanceStatus || !phoneNumber) {
-    return res.redirect('/error');
-  }
+app.post('/rsvp', async (req, res) => {
+  try {
+    const attendanceStatus = (req.body.attendance || '').trim();
+    const hostMessage = (req.body.message || '').trim();
+    const phoneNumber = normalizePhone(req.body.contact || '');
+    const userName = (req.body.name || '').trim();
+    const now = new Date().toISOString();
 
-  if (!['Yes', 'Maybe', 'No'].includes(attendanceStatus)) {
-    return res.redirect('/error');
-  }
-
-  if (phoneNumber.length < 10) {
-    return res.redirect('/error');
-  }
-  if (hostMessage.length > 250) {
-  return res.redirect('/?error=1');
-}
-  // 🔒 WHITELIST CHECK
-  db.get(
-    `SELECT * FROM guest_list WHERE phone = ?`,
-    [phoneNumber],
-    (err, guest) => {
-
-      if (err) {
-        console.error(err);
-        return res.redirect('/error');
-      }
-
-      if (!guest) {
-        return res.redirect('/error');
-      }
-
-      // ✅ Use trusted name from DB
-      const guestName = guest.guest_name;
-
-      const insertOrUpdate = `
-        INSERT INTO rsvps (
-          phone_number,
-          guest_name,
-          attendance_status,
-          host_message,
-          submitted_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(phone_number) DO UPDATE SET
-          attendance_status = excluded.attendance_status,
-          host_message = excluded.host_message,
-          updated_at = excluded.updated_at
-      `;
-
-      db.run(
-        insertOrUpdate,
-        [
-          phoneNumber,
-          guestName,
-          attendanceStatus,
-          hostMessage,
-          now,
-          now
-        ],
-        function (err) {
-          if (err) {
-            console.error(err);
-            return res.redirect('/error');
-          }
-
-          writeExcelSnapshot();
-          return res.redirect('/thank-you');
-        }
-      );
+    if(!phoneNumber || !attendanceStatus) {
+      return res.redirect('/');
     }
-  );
-});
+    // 🔒 WHITELIST CHECK
+    const guestDoc = await db.collection('guest_list').doc(phoneNumber).get();
 
-//admin route
-
-app.get('/admin/full', (req, res) => {
-  db.all(
-    `
-    SELECT 
-      g.phone,
-      g.guest_name,
-      r.attendance_status
-    FROM guest_list g
-    LEFT JOIN rsvps r 
-      ON g.phone = r.phone_number
-    ORDER BY g.guest_name
-    `,
-    [],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to load list' });
-      }
-
-      res.render('admin', { rows });
+    if (!guestDoc.exists) {
+      return res.redirect('/?error=1');
     }
-  );
-});
 
-app.get('/admin/full', (req, res) => {
-  const password = req.query.key;
+    const guestName = guestDoc.data().name;
 
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(403).send('Unauthorized');
+    // SAVE RSVP
+    
+    await db.collection('rsvps').doc(phoneNumber).set({
+      phone: phoneNumber,
+      guest_name_host: guestName,
+      guest_name_user: userName, // ✅ NEW
+      attendance_status: attendanceStatus,
+      host_message: hostMessage,
+      updated_at: now
+    });
+
+    await writeExcelSnapshot();
+
+    return res.redirect('/thank-you');
+
+  } catch (err) {
+    console.error(err);
+    return res.redirect('/?error=1');
   }
+});
 
-  db.all(
-    `
-    SELECT 
-      g.phone,
-      g.guest_name,
-      r.attendance_status
-    FROM guest_list g
-    LEFT JOIN rsvps r 
-      ON g.phone = r.phone_number
-    ORDER BY g.guest_name
-    `,
-    [],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).send('Failed to load list');
-      }
+// =====================
+// ADMIN DASHBOARD
+// =====================
 
-      res.render('admin', { rows });
-    }
-  );
+app.get('/admin/full', async (req, res) => {
+  
+  const key = req.query.key;
+  
+  if (key !== ADMIN_KEY) {
+    return res.send('Unauthorized');
+  }
+  const guestsSnap = await db.collection('guest_list').get();
+  const rsvpSnap = await db.collection('rsvps').get();
+
+  const rsvpMap = {};
+  rsvpSnap.forEach(doc => {
+    rsvpMap[doc.id] = doc.data();
+  });
+
+  const rows = [];
+
+  guestsSnap.forEach(doc => {
+    const guest = doc.data();
+    const rsvp = rsvpMap[doc.id];
+
+    rows.push({
+      phone: doc.id,
+      guest_name_host: guest.name || '-',
+      guest_name_user: rsvp ? rsvp.guest_name_user || '-' : '-',
+      attendance_status: rsvp ? rsvp.attendance_status : null
+    });
+  });
+
+  res.render('admin', { rows,key });
 });
 
 
+// =====================
+// ADD GUEST ROUTE
+// =====================
+
+app.post('/admin/add-guest', async (req, res) => {
+  try {
+    const { guest_name_host, phone, notes } = req.body;
+
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!guest_name_host || !normalizedPhone) {
+      return res.redirect('/admin/full');
+    }
+
+    await db.collection('guest_list').doc(normalizedPhone).set({
+      name: guest_name_host,
+      notes: notes || ''
+    }, { merge: true });
+
+    res.redirect('/admin/full');
+
+  } catch (err) {
+    console.error(err);
+    res.redirect('/admin/full');
+  }
+});
+
+// =====================
+// UPDATE GUEST ROUTE
+// =====================
+app.post('/admin/update-guest', async (req, res) => {
+  try {
+    const { original_phone, guest_name_host, phone, notes, attendance_status } = req.body;
+    const now = new Date().toISOString();
+    const oldPhone = normalizePhone(original_phone);
+    const newPhone = normalizePhone(phone);
+    
+    if (!guest_name_host || !newPhone) {
+      return res.redirect('/admin/full');
+    }
+
+    // If phone changed → move doc
+    if (oldPhone !== newPhone) {
+      const oldDoc = await db.collection('guest_list').doc(oldPhone).get();
+
+      if (oldDoc.exists) {
+        await db.collection('guest_list').doc(newPhone).set({
+          ...oldDoc.data(),
+          name: guest_name_host,
+          notes: notes || ''
+        });
+
+        await db.collection('guest_list').doc(oldPhone).delete();
+      }
+    } else {
+      await db.collection('guest_list').doc(oldPhone).update({
+        name: guest_name_host,
+        notes: notes || ''
+      });
+    }
+    if (attendance_status === '') {
+      await db.collection('rsvps').doc(newPhone).delete();
+    } else {
+      await db.collection('rsvps').doc(newPhone).set({
+        attendance_status,
+        updated_at: now
+      }, { merge: true });
+    }
+    res.redirect('/admin/full');
+
+  } catch (err) {
+    console.error(err);
+    res.redirect('/admin/full');
+  }
+});
+
+// =====================
+// DELETE GUEST ROUTE
+// =====================
+app.post('/admin/delete-guest', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    const normalizedPhone = normalizePhone(phone);
+
+    // delete guest
+    await db.collection('guest_list').doc(normalizedPhone).delete();
+
+    // delete RSVP too (important)
+    await db.collection('rsvps').doc(normalizedPhone).delete();
+
+    res.redirect('/admin/full');
+
+  } catch (err) {
+    console.error(err);
+    res.redirect('/admin/full');
+  }
+});
+
+// =====================
+// UPDATE RSVP ROUTE
+// =====================
+
+app.post('/admin/update-rsvp', async (req, res) => {
+  try {
+    const { phone, attendance_status } = req.body;
+    const normalizedPhone = normalizePhone(phone);
+    const now = new Date().toISOString();
+
+    if (!normalizedPhone) {
+      return res.redirect('/admin/full');
+    }
+
+    // If cleared → delete RSVP (back to "No Response")
+    if (!attendance_status) {
+      await db.collection('rsvps').doc(normalizedPhone).delete();
+    } else {
+      await db.collection('rsvps').doc(normalizedPhone).set({
+        attendance_status,
+        updated_at: now
+      }, { merge: true });
+    }
+
+    res.redirect('/admin/full');
+
+  } catch (err) {
+    console.error(err);
+    res.redirect('/admin/full');
+  }
+});
+// =====================
+// EXPORT ROUTE
+// =====================
+
+app.get('/admin/export', async (req, res) => {
+  await writeExcelSnapshot();
+
+  setTimeout(() => {
+    if (!fs.existsSync(EXCEL_PATH)) {
+      return res.status(404).send('No file available');
+    }
+
+    res.download(EXCEL_PATH);
+  }, 200);
+});
+
+// =====================
+// START SERVER
+// =====================
 
 app.listen(PORT, () => {
-  writeExcelSnapshot();
   console.log(`Server running on http://localhost:${PORT}`);
 });
