@@ -1,7 +1,9 @@
 /* ================ */
 /* Base */
 /* ================ */
-
+html, body {
+  overflow-x: hidden;
+}
 * {
   box-sizing: border-box;
 }
@@ -28,14 +30,16 @@ img {
 .page-shell {
   min-height: 100vh;
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: flex-start;
-  padding: 20px 40px;
+  padding: 20px;
+  overflow-x: hidden; 
 }
 
 .invite-card {
   width: 100%;
-  max-width: none;
+  max-width: 1200px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   border-radius: 28px;
@@ -180,7 +184,9 @@ h1 {
   overflow-x: auto;
   padding-bottom: 10px;
 }
-
+.admin-table-wrap {
+  -webkit-overflow-scrolling: touch;
+}
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -221,6 +227,7 @@ h1 {
 /* Responsive */
 /* ================ */
 
+
 @media (max-width: 900px) {
   .invite-card {
     grid-template-columns: 1fr;
@@ -228,6 +235,14 @@ h1 {
 
   .admin-form-grid {
     grid-template-columns: 1fr;
+  }
+
+    .content-wrap {
+    padding: 24px 20px; /* smaller padding for phone */
+  }
+
+  .page-shell {
+    padding: 10px;
   }
 }
 /* ================ */
