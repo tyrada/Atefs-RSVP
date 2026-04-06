@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 // FIREBASE SETUP
 // =====================
 
-const serviceAccount = requireJSON.parse(process.env.FIREBASE_KEY);
+const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
 
 admin.initializeApp({
