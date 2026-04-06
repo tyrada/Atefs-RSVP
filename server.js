@@ -5,6 +5,9 @@ const XLSX = require('xlsx');
 const admin = require('firebase-admin');
 const ADMIN_KEY = process.env.ADMIN_KEY;;
 
+//for testing locally only 
+// const serviceAccount = require('./serviceAccount.json');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
