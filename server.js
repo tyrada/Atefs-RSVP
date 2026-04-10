@@ -85,7 +85,7 @@ async function seedGuestsFromExcel() {
   console.log('✅ Excel import complete');
 }
 
-//seedGuestsFromExcel();
+seedGuestsFromExcel();
 
 // =====================
 // EXCEL EXPORT
@@ -210,7 +210,8 @@ app.get('/admin/full', async (req, res) => {
       phone: doc.id,
       guest_name_host: guest.name || '-',
       guest_name_user: rsvp ? rsvp.guest_name_user || '-' : '-',
-      attendance_status: rsvp ? rsvp.attendance_status : null
+      attendance_status: rsvp ? rsvp.attendance_status : null,
+      notes: guest.notes || '-'
     });
   });
 
