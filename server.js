@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const ADMIN_KEY = process.env.ADMIN_KEY;;
 
 //for testing locally only 
-// const serviceAccount = require('./serviceAccount.json');
+//const serviceAccount = require('./adminKey.json');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,23 +57,35 @@ function normalizePhone(input = '') {
 // =====================
 // SEED GUEST LIST
 // =====================
+async function seedGuestsFromExcel() {
+  const workbook = XLSX.readFile('./data/Henna List English.xlsx');
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
 
-async function seedGuests() {
-  const guests = [
-    { phone: '6131111111', name: 'Ahmed' },
-    { phone: '6132222222', name: 'Omar' },
-    { phone: '6133333333', name: 'Yusuf' },
-    { phone: '6134444444', name: 'Hassan' }
-  ];
+  const rows = XLSX.utils.sheet_to_json(sheet);
 
-  for (const g of guests) {
-    await db.collection('guest_list').doc(g.phone).set({
-      name: g.name
+  for (const row of rows) {
+    const name = (row.Name || row.name || '').toString().trim();
+    const phoneRaw = (row.Phone || row.phone || '').toString();
+
+    const phone = normalizePhone(phoneRaw);
+
+    if (!phone || !name) {
+      console.log('Skipping invalid row:', row);
+      continue;
+    }
+
+    await db.collection('guest_list').doc(phone).set({
+      name: name
     }, { merge: true });
+
+    console.log(`Added: ${name} (${phone})`);
   }
+
+  console.log('✅ Excel import complete');
 }
 
-seedGuests();
+//seedGuestsFromExcel();
 
 // =====================
 // EXCEL EXPORT
