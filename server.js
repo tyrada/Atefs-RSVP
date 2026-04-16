@@ -85,7 +85,7 @@ async function seedGuestsFromExcel() {
   console.log('✅ Excel import complete');
 }
 
-seedGuestsFromExcel();
+//seedGuestsFromExcel();
 
 // =====================
 // EXCEL EXPORT
